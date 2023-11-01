@@ -6,6 +6,13 @@ class Puzzle
 public:
     Puzzle(std::string init);
 
+    // move the puzzle balls by one operation
+    // the opcode is one of 'S' (shift) or 'L', 'l', 'R', r' (rotate left/right up/down)
+    void Move(char opcode);
+
+    // estimate how good this arrangement is 1=solved, 0=random
+    float Score();
+
     void Print();
 
 private:
@@ -20,7 +27,9 @@ private:
     // the left state there will be a ball in position 1 and position 6 will be empty.
     // when the shifter is in the right state position 1 will be empty and position 6 will
     // contain a ball.
-
     int row[5];
+
+    // score for this arrangement (<0 if not yet calculated)
+    float score;
 
 };

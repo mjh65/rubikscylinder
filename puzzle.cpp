@@ -3,6 +3,7 @@
 #include <iostream>
 
 Puzzle::Puzzle(std::string init)
+:   score(-1.0f)
 {
     // the string provides initialisation details for the puzzle
     // '-' is an empty location. there must be 1 of these in rows 1,3,5 and 2 of these in  rows 2,4, only at the ends
@@ -86,8 +87,91 @@ Puzzle::Puzzle(std::string init)
     }
 }
 
+void Puzzle::Move(char opcode)
+{
+    score = -1.0f; // force recalculation
+    if ((opcode == 'S') || (opcode == 's'))
+    {
+        // toggle the shifter
+        bool shifter_down = ((row[0] & 0x000000f0) != 0);
+        if (shifter_down)
+        {
+            row[0] <<= 4;
+            row[2] <<= 4;
+            row[4] <<= 4;
+        }
+        else
+        {
+            row[0] >>= 4;
+            row[2] >>= 4;
+            row[4] >>= 4;
+        }
+    }
+    if (opcode == 'L')
+    {
+        int z = row[0] & 0x0000ff00;
+        row[0] = (row[0] & 0x0fff00f0) | (row[1] & 0x0000ff00);
+        row[1] = (row[1] & 0x0fff00f0) | (row[2] & 0x0000ff00);
+        row[2] = (row[2] & 0x0fff00f0) | (row[3] & 0x0000ff00);
+        row[3] = (row[3] & 0x0fff00f0) | (row[4] & 0x0000ff00);
+        row[4] = (row[4] & 0x0fff00f0) | z;
+    }
+    if (opcode == 'l')
+    {
+        int z = row[4] & 0x0000ff00;
+        row[4] = (row[4] & 0x0fff00f0) | (row[3] & 0x0000ff00);
+        row[3] = (row[3] & 0x0fff00f0) | (row[2] & 0x0000ff00);
+        row[2] = (row[2] & 0x0fff00f0) | (row[1] & 0x0000ff00);
+        row[1] = (row[1] & 0x0fff00f0) | (row[0] & 0x0000ff00);
+        row[0] = (row[0] & 0x0fff00f0) | z;
+    }
+    if (opcode == 'R')
+    {
+        int z = row[0] & 0x00ff0000;
+        row[0] = (row[0] & 0x0f00fff0) | (row[1] & 0x00ff0000);
+        row[1] = (row[1] & 0x0f00fff0) | (row[2] & 0x00ff0000);
+        row[2] = (row[2] & 0x0f00fff0) | (row[3] & 0x00ff0000);
+        row[3] = (row[3] & 0x0f00fff0) | (row[4] & 0x00ff0000);
+        row[4] = (row[4] & 0x0f00fff0) | z;
+    }
+    if (opcode == 'r')
+    {
+        int z = row[4] & 0x00ff0000;
+        row[4] = (row[4] & 0x0f00fff0) | (row[3] & 0x00ff0000);
+        row[3] = (row[3] & 0x0f00fff0) | (row[2] & 0x00ff0000);
+        row[2] = (row[2] & 0x0f00fff0) | (row[1] & 0x00ff0000);
+        row[1] = (row[1] & 0x0f00fff0) | (row[0] & 0x00ff0000);
+        row[0] = (row[0] & 0x0f00fff0) | z;
+    }
+}
+
+float Puzzle::Score()
+{
+    if (score < 0.0f)
+    {
+        score = 0.0f;
+        for (int r=0; r<5; ++r)
+        {
+            std::bitset<32> colour_flags = 0;
+            colour_flags.set((row[r] >> 8) & 0x0f);
+            colour_flags.set((row[r] >> 12) & 0x0f);
+            colour_flags.set((row[r] >> 16) & 0x0f);
+            colour_flags.set((row[r] >> 20) & 0x0f);
+            // count the bits in colour_flags
+            int n_colours = colour_flags.count();
+            //std::cout << "Row " << r << " has " << n_colours << " colours" << std::endl;
+            int s = 4 - n_colours; // worst case has 4 different colours, scores 0
+            s *= s; // score will now be biased: 9, 4, 1, 0
+            if (colour_flags[15]) s /= 2; // any black in the row halves the score
+            score += (s / 45.0f); // 45 is the best possible score, it means the puzzle is solved
+        }
+    }
+    return score;
+}
+
 void Puzzle::Print()
 {
+    std::cout << "/               \\" << std::endl;
     std::string smap("-BGYOR         X"); // exactly 16 characters long
     for (int i=0; i<5; ++i)
     {
@@ -100,5 +184,5 @@ void Puzzle::Print()
         }
         std::cout << std::endl;
     }
-
+    std::cout << "\\               / score=" << Score() << std::endl;
 }
